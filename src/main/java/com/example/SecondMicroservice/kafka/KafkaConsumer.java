@@ -22,6 +22,7 @@ public class KafkaConsumer {
         String key = record.key();
         String[] parts = key.split("_");
         String typeOperations = parts[0];
+        System.out.println(typeOperations);
         switch (typeOperations) {
             case "getPersonByUsername":
                 personService.getPersonByUsername(record.value().getUsername());

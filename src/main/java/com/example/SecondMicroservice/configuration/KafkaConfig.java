@@ -13,6 +13,7 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
@@ -53,11 +54,14 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConsumerFactory<String,PersonDTO> consumerFactory(){
+    public ConsumerFactory<String, PersonDTO> consumerFactory() {
+        Map<String, Object> props = new HashMap<>(consumerConfigs());
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+
         return new DefaultKafkaConsumerFactory<>(
-                consumerConfigs(),
+                props,
                 new StringDeserializer(),
-                new JsonDeserializer<>(PersonDTO.class)
+                new ErrorHandlingDeserializer<>(new JsonDeserializer<>(PersonDTO.class))
         );
     }
 

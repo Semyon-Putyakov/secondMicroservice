@@ -29,8 +29,18 @@ public class PersonService {
 
     @Transactional(readOnly = true)
     public void getPersonByUsername(String username){
+
         PersonModel personModel = personRepository.findByUsername(username).orElse(null);
-        PersonDTO personDTO = modelMapper.map(personModel, PersonDTO.class);
+
+        PersonDTO personDTO;
+        PersonModel NullModel = new PersonModel(0,null,null);
+
+        if (personModel != null) {
+            personDTO = modelMapper.map(personModel, PersonDTO.class);
+        } else {
+            personDTO = modelMapper.map(NullModel, PersonDTO.class);
+        }
+
 
         String key = "getPersonByUsername_" + personDTO.getUsername();
 

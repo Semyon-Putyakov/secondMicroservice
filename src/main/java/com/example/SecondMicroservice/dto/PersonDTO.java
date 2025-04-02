@@ -1,8 +1,15 @@
 package com.example.SecondMicroservice.dto;
 
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
+
 public class PersonDTO {
 
+    @NotEmpty(message = "Пустой логин")
+    @Size(min = 3, max = 100, message = "Минимальное количество символов - 3, Максимальное количество символов - 100")
     private String username;
+    @NotEmpty(message = "Пустой пароль")
+    @Size(min = 3, max = 100, message = "Минимальное количество символов - 3, Максимальное количество символов - 100")
     private String password;
 
     public PersonDTO() {}
@@ -29,7 +36,14 @@ public class PersonDTO {
     }
 
     public static class PersonDTOBuilder{
+
+        @NotEmpty(message = "Пустой логин")
+        @Size(min = 3, max = 100, message = "Минимальное количество символов - 3, Максимальное количество символов - 100")
         private String username;
+
+
+        @NotEmpty(message = "Пустой пароль")
+        @Size(min = 3, max = 100, message = "Минимальное количество символов - 3, Максимальное количество символов - 100")
         private String password;
 
         public PersonDTOBuilder setUsername(String username) {
@@ -45,8 +59,13 @@ public class PersonDTO {
             return new PersonDTO(username, password);
         }
 
-
-
     }
 
+    @Override
+    public String toString() {
+        return "PersonDTO{" +
+                "username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                '}';
+    }
 }

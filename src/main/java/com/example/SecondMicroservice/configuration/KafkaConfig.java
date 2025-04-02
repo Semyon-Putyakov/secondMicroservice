@@ -20,6 +20,8 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.kafka.common.requests.FetchMetadata.log;
+
 @Configuration
 public class KafkaConfig {
 
@@ -55,13 +57,27 @@ public class KafkaConfig {
 
     @Bean
     public ConsumerFactory<String, PersonDTO> consumerFactory() {
-        Map<String, Object> props = new HashMap<>(consumerConfigs());
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        Map<String, Object> props = consumerConfigs();
+        JsonDeserializer<PersonDTO> deserializer = new JsonDeserializer<>(PersonDTO.class) {
+            @Override
+            public PersonDTO deserialize(String topic, byte[] data) {
+                try {
+                    log.info("Attempting to deserialize message from topic: {}", topic);
+                    return super.deserialize(topic, data);
+                } catch (Exception e) {
+                    log.error("Deserialization error for topic {}: {}", topic, new String(data), e);
+                    throw e;
+                }
+            }
+        };
+        deserializer.setRemoveTypeHeaders(false);
+        deserializer.addTrustedPackages("com.example.*"); // Разрешаем десериализацию из обоих пакетов
+        deserializer.setUseTypeMapperForKey(true);
 
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new StringDeserializer(),
-                new ErrorHandlingDeserializer<>(new JsonDeserializer<>(PersonDTO.class))
+                deserializer
         );
     }
 

@@ -11,7 +11,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+
 
 @ExtendWith(MockitoExtension.class)
 class KafkaProducerTest {
@@ -42,7 +43,7 @@ class KafkaProducerTest {
     void send_ShouldCallKafkaTemplateSend() {
         kafkaProducer.send(testRecord);
 
-        Mockito.verify(kafkaTemplate).send(
+        Mockito.verify(kafkaTemplate, times(1)).send(
             testRecord.topic(),
             testRecord.key(),
             testRecord.value()
@@ -59,7 +60,7 @@ class KafkaProducerTest {
 
         kafkaProducer.send(recordWithNullValue);
 
-        Mockito.verify(kafkaTemplate).send(
+        Mockito.verify(kafkaTemplate, times(1)).send(
             recordWithNullValue.topic(),
             recordWithNullValue.key(),
             recordWithNullValue.value()
@@ -76,7 +77,7 @@ class KafkaProducerTest {
 
         kafkaProducer.send(recordWithEmptyTopic);
 
-        Mockito.verify(kafkaTemplate).send(
+        Mockito.verify(kafkaTemplate, times(1)).send(
             recordWithEmptyTopic.topic(),
             recordWithEmptyTopic.key(),
             recordWithEmptyTopic.value()
@@ -93,7 +94,7 @@ class KafkaProducerTest {
 
         kafkaProducer.send(recordWithNullKey);
 
-        Mockito.verify(kafkaTemplate).send(
+        Mockito.verify(kafkaTemplate, times(1)).send(
             recordWithNullKey.topic(),
             recordWithNullKey.key(),
             recordWithNullKey.value()

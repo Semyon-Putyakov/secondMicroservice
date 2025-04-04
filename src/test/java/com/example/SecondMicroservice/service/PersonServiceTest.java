@@ -4,19 +4,16 @@ import com.example.SecondMicroservice.dto.PersonDTO;
 import com.example.SecondMicroservice.kafka.KafkaProducer;
 import com.example.SecondMicroservice.model.PersonModel;
 import com.example.SecondMicroservice.repository.PersonRepository;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,90 +23,111 @@ class PersonServiceTest {
     private PersonRepository personRepository;
 
     @Mock
-    private ModelMapper modelMapper;
+    private KafkaProducer kafkaProducer;
 
     @Mock
-    private KafkaProducer kafkaProducer;
+    private ModelMapper modelMapper;
 
     @InjectMocks
     private PersonService personService;
 
-    private PersonDTO testPersonDTO;
-    private PersonModel testPersonModel;
+    @Captor
+    private ArgumentCaptor<ProducerRecord<String, PersonDTO>> producerRecordCaptor;
 
-    @BeforeEach
-    void setUp() {
-        testPersonDTO = new PersonDTO();
-        testPersonDTO.setId(1);
-        testPersonDTO.setUsername("testUser");
+    @Captor
+    private ArgumentCaptor<PersonModel> personModelCaptor;
 
-        testPersonModel = new PersonModel();
-        testPersonModel.setId(1);
-        testPersonModel.setUsername("testUser");
+    @Test
+    void testGetPersonByUsername_existingUser() {
+        PersonModel personModel = new PersonModel(1, "john", "pass");
+        PersonDTO personDTO = new PersonDTO("john", "pass", 1);
+        Mockito.when(personRepository.findByUsername("john")).thenReturn(Optional.of(personModel));
+        Mockito.when(modelMapper.map(eq(personModel), eq(PersonDTO.class))).thenReturn(personDTO);
+
+        personService.getPersonByUsername("john");
+
+        Mockito.verify(kafkaProducer, times(1)).send(producerRecordCaptor.capture());
+
+        ProducerRecord<String, PersonDTO> record = producerRecordCaptor.getValue();
+        Assertions.assertEquals("topic_response", record.topic());
+        Assertions.assertEquals("getPersonByUsername_john", record.key());
+        Assertions.assertEquals("john", record.value().getUsername());
     }
 
     @Test
-    void getPersonByUsername_WhenPersonExists_ShouldSendToKafka() {
-        Mockito.when(personRepository.findByUsername("testUser")).thenReturn(Optional.of(testPersonModel));
-        Mockito.when(modelMapper.map(any(PersonModel.class), eq(PersonDTO.class))).thenReturn(testPersonDTO);
+    void testGetPersonByUsername_notExistingUser() {
+        PersonDTO nullDTO = new PersonDTO(null, null, 0);
 
-        personService.getPersonByUsername("testUser");
+        Mockito.when(personRepository.findByUsername("john")).thenReturn(Optional.empty());
+        Mockito.when(modelMapper.map(any(PersonModel.class), eq(PersonDTO.class)))
+                .thenReturn(nullDTO);
 
-        Mockito.verify(kafkaProducer).send(any());
+        personService.getPersonByUsername("john");
+
+        Mockito.verify(kafkaProducer, times(1)).send(producerRecordCaptor.capture());
+
+        ProducerRecord<String, PersonDTO> record = producerRecordCaptor.getValue();
+        Assertions.assertEquals("topic_response", record.topic());
+        Assertions.assertEquals("getPersonByUsername_null", record.key());
+        Assertions.assertNull(record.value().getUsername());
     }
 
     @Test
-    void getPersonById_WhenPersonExists_ShouldSendToKafka() {
-        Mockito.when(personRepository.findById(1)).thenReturn(Optional.of(testPersonModel));
-        Mockito.when(modelMapper.map(any(PersonModel.class), eq(PersonDTO.class))).thenReturn(testPersonDTO);
+    void testGetPersonById_existingId() {
+        PersonModel personModel = new PersonModel(1, "john", "pass");
+        PersonDTO personDTO = new PersonDTO("john", "pass", 1);
+        Mockito.when(personRepository.findById(1)).thenReturn(Optional.of(personModel));
+        Mockito.when(modelMapper.map(eq(personModel), eq(PersonDTO.class))).thenReturn(personDTO);
 
         personService.getPersonById(1);
 
-        Mockito.verify(kafkaProducer).send(any());
+        Mockito.verify(kafkaProducer, times(1)).send(producerRecordCaptor.capture());
+
+        ProducerRecord<String, PersonDTO> record = producerRecordCaptor.getValue();
+        Assertions.assertEquals("getPersonById_1", record.key());
+        Assertions.assertEquals(1, record.value().getId());
     }
 
     @Test
-    void createPerson_ShouldSaveToRepository() {
-        Mockito.when(modelMapper.map(any(PersonDTO.class), eq(PersonModel.class))).thenReturn(testPersonModel);
+    void testCreatePerson() {
+        PersonDTO dto = new PersonDTO("john", "pass", 1);
+        PersonModel model = new PersonModel(1, "john", "pass");
+        Mockito.when(modelMapper.map(dto, PersonModel.class)).thenReturn(model);
 
-        personService.createPerson(testPersonDTO);
+        personService.createPerson(dto);
 
-        Mockito.verify(personRepository).save(testPersonModel);
+        Mockito.verify(personRepository, times(1)).save(personModelCaptor.capture());
+
+        PersonModel saved = personModelCaptor.getValue();
+        Assertions.assertEquals("john", saved.getUsername());
+        Assertions.assertEquals("pass", saved.getPassword());
     }
 
     @Test
-    void updatePerson_WhenPersonExists_ShouldUpdateAndSave() {
-        Mockito.when(personRepository.findById(1)).thenReturn(Optional.of(testPersonModel));
+    void testUpdatePerson_existingId() {
+        PersonModel personModel = new PersonModel(1, "oldUsername", "pass");
+        Mockito.when(personRepository.findById(1)).thenReturn(Optional.of(personModel));
 
-        personService.updatePerson(testPersonDTO);
+        PersonDTO dto = new PersonDTO("newUsername", "pass", 1);
+        personService.updatePerson(dto);
 
-        Mockito.verify(personRepository).save(testPersonModel);
-        Assertions.assertEquals(testPersonDTO.getUsername(), testPersonModel.getUsername());
+        Mockito.verify(personRepository, times(1)).save(personModelCaptor.capture());
+
+        PersonModel updated = personModelCaptor.getValue();
+        Assertions.assertEquals("newUsername", updated.getUsername());
     }
 
     @Test
-    void deletePerson_WhenPersonExists_ShouldDeleteFromRepository() {
-        Mockito.when(personRepository.findById(1)).thenReturn(Optional.of(testPersonModel));
+    void testDeletePerson_existingId() {
+        PersonModel personModel = new PersonModel(1, "john", "pass");
+        Mockito.when(personRepository.findById(1)).thenReturn(Optional.of(personModel));
 
         personService.deletePerson(1);
 
-        Mockito.verify(personRepository).delete(testPersonModel);
+        Mockito.verify(personRepository, times(1)).delete(personModelCaptor.capture());
+
+        PersonModel deleted = personModelCaptor.getValue();
+        Assertions.assertEquals(1, deleted.getId());
     }
 
-    @Test
-    void getPersonByUsername_WhenPersonDoesNotExist_ShouldSendNullModel() {
-        Mockito.when(personRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
-
-        personService.getPersonByUsername("nonexistent");
-
-        Mockito.verify(kafkaProducer).send(any());
-    }
-
-    @Test
-    void getPersonById_WhenPersonDoesNotExist_ShouldSendNullModel() {
-        Mockito.when(personRepository.findById(999)).thenReturn(Optional.empty());
-        personService.getPersonById(999);
-
-        Mockito.verify(kafkaProducer).send(any());
-    }
-} 
+}

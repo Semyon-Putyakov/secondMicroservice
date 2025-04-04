@@ -11,7 +11,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+
 
 @ExtendWith(MockitoExtension.class)
 class KafkaConsumerTest {
@@ -43,7 +44,7 @@ class KafkaConsumerTest {
 
         kafkaConsumer.listen(record);
 
-        Mockito.verify(personService).getPersonByUsername(testPersonDTO.getUsername());
+        Mockito.verify(personService, times(1)).getPersonByUsername(testPersonDTO.getUsername());
     }
 
     @Test
@@ -58,7 +59,7 @@ class KafkaConsumerTest {
 
         kafkaConsumer.listen(record);
 
-        Mockito.verify(personService).getPersonById(testPersonDTO.getId());
+        Mockito.verify(personService, times(1)).getPersonById(testPersonDTO.getId());
     }
 
     @Test
@@ -73,7 +74,7 @@ class KafkaConsumerTest {
 
         kafkaConsumer.listen(record);
 
-        Mockito.verify(personService).createPerson(testPersonDTO);
+        Mockito.verify(personService, times(1)).createPerson(testPersonDTO);
     }
 
     @Test
@@ -88,7 +89,7 @@ class KafkaConsumerTest {
 
         kafkaConsumer.listen(record);
 
-        Mockito.verify(personService).updatePerson(testPersonDTO);
+        Mockito.verify(personService, times(1)).updatePerson(testPersonDTO);
     }
 
     @Test
@@ -103,7 +104,7 @@ class KafkaConsumerTest {
 
         kafkaConsumer.listen(record);
 
-        Mockito.verify(personService).deletePerson(testPersonDTO.getId());
+        Mockito.verify(personService, times(1)).deletePerson(testPersonDTO.getId());
     }
 
     @Test

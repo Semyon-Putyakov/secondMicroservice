@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "person")
 public class PersonModel {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -49,4 +48,5 @@ public class PersonModel {
     public void setPassword(String password) {
         this.password = password;
     }
+
 }

@@ -13,10 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class PersonService {
-
     private final PersonRepository personRepository;
     private final ModelMapper modelMapper;
     private final KafkaProducer kafkaProducer;
+    private PersonDTO personDTO;
+    private PersonModel NullModel = new PersonModel(0, null, null);
 
     @Autowired
     public PersonService(PersonRepository personRepository, ModelMapper modelMapper, KafkaProducer kafkaProducer) {
@@ -26,31 +27,47 @@ public class PersonService {
 
     }
 
+    @Transactional(readOnly = true)
+    public void getPersonByUsername(String username) {
+        PersonModel personModel = personRepository.findByUsername(username).orElse(null);
+        PersonDTO personDTO = mapper(personModel);
+        String key = "getPersonByUsername_" + personDTO.getUsername();
+        ProducerRecord<String, PersonDTO> record = new ProducerRecord<>("topic_response", key, personDTO);
+        kafkaProducer.send(record);
+    }
 
     @Transactional(readOnly = true)
-    public void getPersonByUsername(String username){
-
-        PersonModel personModel = personRepository.findByUsername(username).orElse(null);
-
-        PersonDTO personDTO;
-        PersonModel NullModel = new PersonModel(0,null,null);
-
-        if (personModel != null) {
-            personDTO = modelMapper.map(personModel, PersonDTO.class);
-        } else {
-            personDTO = modelMapper.map(NullModel, PersonDTO.class);
-        }
-
-
-        String key = "getPersonByUsername_" + personDTO.getUsername();
-
-        ProducerRecord<String,PersonDTO> record = new ProducerRecord<>(key,personDTO);
+    public void getPersonById(int id) {
+        PersonModel personModel = personRepository.findById(id).orElse(null);
+        PersonDTO personDTO = mapper(personModel);
+        String key = "getPersonById_" + id;
+        ProducerRecord<String, PersonDTO> record = new ProducerRecord<>("topic_response", key, personDTO);
         kafkaProducer.send(record);
     }
 
 
-    public void createPerson(PersonDTO personDTO){
+    public void createPerson(PersonDTO personDTO) {
         PersonModel personModel = modelMapper.map(personDTO, PersonModel.class);
         personRepository.save(personModel);
+    }
+
+    public void updatePerson(PersonDTO personDTO) {
+        PersonModel personModel = personRepository.findById(personDTO.getId()).orElse(null);
+        personModel.setUsername(personDTO.getUsername());
+        personRepository.save(personModel);
+
+    }
+
+    public void deletePerson(int id) {
+        PersonModel personModel = personRepository.findById(id).orElse(null);
+        personRepository.delete(personModel);
+    }
+
+    private PersonDTO mapper(PersonModel personModel) {
+        if (personModel != null)
+            personDTO = modelMapper.map(personModel, PersonDTO.class);
+        else
+            personDTO = modelMapper.map(NullModel, PersonDTO.class);
+        return personDTO;
     }
 }

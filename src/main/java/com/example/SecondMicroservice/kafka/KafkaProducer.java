@@ -8,8 +8,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class KafkaProducer {
-
-
     private final KafkaTemplate<String, PersonDTO> kafkaTemplate;
 
     @Autowired
@@ -18,6 +16,6 @@ public class KafkaProducer {
     }
 
     public void send(ProducerRecord<String, PersonDTO> record) {
-        kafkaTemplate.send("topic_response", record.key(), record.value());
+        kafkaTemplate.send(record.topic(), record.key(), record.value());
     }
 }

@@ -3,8 +3,6 @@ package com.example.SecondMicroservice.kafka;
 import com.example.SecondMicroservice.dto.PersonDTO;
 import com.example.SecondMicroservice.service.PersonService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
@@ -21,12 +19,11 @@ public class KafkaConsumer {
     @KafkaListener(topics = "topic_request", groupId = "request")
     public void listen(ConsumerRecord<String, PersonDTO> record) {
 
-        System.out.println(record.value().toString());
-        System.out.println(record.key());
         String key = record.key();
         if (key == null) {
             return;
         }
+
         String[] parts = key.split("_");
         if (parts.length == 0) {
             return;
@@ -36,12 +33,18 @@ public class KafkaConsumer {
 
         switch (typeOperations) {
             case "getPersonByUsername":
-                System.out.println("kafkaConsumer getPersonByUsername");
                 personService.getPersonByUsername(record.value().getUsername());
                 break;
+            case "getPersonById":
+                personService.getPersonById(record.value().getId());
             case "createPerson":
-                System.out.println("kafkaConsumer createPerson");
                 personService.createPerson(record.value());
+                break;
+            case "updatePerson":
+                personService.updatePerson(record.value());
+                break;
+            case "deletePerson":
+                personService.deletePerson(record.value().getId());
                 break;
         }
     }
